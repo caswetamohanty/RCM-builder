@@ -5,7 +5,7 @@ Offline browser tool that turns a process narrative into a draft Risk and Contro
 
 A single-file, offline browser tool that turns a process narrative into a draft **Risk and Control Matrix (RCM)** for SOX / internal-control reviews, with built-in format validation and exports to Excel, Word and CSV.
 
-**[Open the live tool]. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
+Open the live tool. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
 
 > All files in `demo/` are **synthetic sample data**.
@@ -91,7 +91,7 @@ Listed here because they are real, and they are the roadmap:
 ## 6. Run or host it
 
 - **Locally:** download `RCM builder.html` and double-click it.
-- **GitHub Pages:** Settings > Pages > Deploy from branch > `main` / root. The tool will be live at `https://YOUR-USERNAME.github.io/rcm-builder/RCM%20builder.html`.
+- **GitHub Pages: (https://github.com/caswetamohanty/RCM-builder/blob/main/RCM_builder.html)
 
 ## 7. About
 
