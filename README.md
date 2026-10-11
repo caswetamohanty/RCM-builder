@@ -1,9 +1,6 @@
-# RCM-builder
+# RCM-builder: Process Narrative to Risk & Control Matrix
 Offline browser tool that turns a process narrative into a draft Risk and Control Matrix (RCM) with validation and Excel/Word/CSV export
 
-# RCM Builder: Process Narrative to Risk & Control Matrix
-
-A single-file, offline browser tool that turns a process narrative into a draft **Risk and Control Matrix (RCM)** for SOX / internal-control reviews, with built-in format validation and exports to Excel, Word and CSV.
 
 Open the live tool. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
