@@ -7,7 +7,6 @@ A single-file, offline browser tool that turns a process narrative into a draft 
 
 **[Open the live tool]. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
-![RCM Builder after import and review, Fixed Assets demo](demo/screenshots/04_after_import_review.png)
 
 > All files in `demo/` are **synthetic sample data**.
 
