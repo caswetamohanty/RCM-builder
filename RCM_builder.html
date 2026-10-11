@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RCM Builder (offline)</title>
+<style>
+:root{--ink:#1B2A41;--bg:#EEF1F5;--card:#fff;--line:#CBD3DE;--navy:#1E3A5F;--amb:#C2410C;--ambbg:#FEF0E6;--ok:#166534;--errbg:#FDE2E2;--err:#9B1C1C}
+@media(prefers-color-scheme:dark){:root{--ink:#E6EBF2;--bg:#0F1724;--card:#17212F;--line:#33435A;--navy:#3B6EA8;--amb:#FDBA74;--ambbg:#3A2414;--ok:#86EFAC;--errbg:#4A1D1D;--err:#FCA5A5}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,Arial,sans-serif}
+main{max-width:1150px;margin:auto;padding:20px 16px 60px}
+h1{font:700 28px Georgia,serif;margin:0 0 4px}h2{font:700 18px Georgia,serif;margin:0 0 10px}
+.sub{color:var(--ink);opacity:.75;margin:0 0 18px;max-width:70ch}
+section{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:4px;padding:16px;margin-bottom:16px}
+label{font-weight:600;display:block;margin:8px 0 4px}
+textarea,select,input{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:8px}
+textarea{min-height:130px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:10px}.row>*{flex:1 1 200px}
+button{flex:0 0 auto;width:auto;font:600 14px inherit;font-family:inherit;padding:9px 14px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:3px;cursor:pointer}
+button.g{background:transparent;color:var(--ink);border-color:var(--line)}button:focus-visible,td:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--amb);outline-offset:1px}
+.msg{margin-top:10px;font-weight:600}.msg.e{color:var(--amb)}.msg.k{color:var(--ok)}
+.w{overflow-x:auto;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:1000px;font-size:13px}
+th{background:var(--navy);color:#fff;text-align:left;padding:7px;position:sticky;top:0}
+td{border:1px solid var(--line);padding:6px;vertical-align:top}td[contenteditable]{min-width:90px}
+td.v{background:var(--errbg);color:var(--err);font-weight:600}td.m{background:var(--ambbg);color:var(--amb);font-weight:600}
+.src{font-size:12px;opacity:.8}.x{background:none;border:0;color:var(--amb);padding:2px 6px;font-size:18px}
+small{opacity:.75}
+</style></head><body><main>
+<h1>RCM Builder</h1>
+<p class="sub">Paste or upload a process narrative and get a draft Risk and Control Matrix built only from what your narrative says. Everything runs in your browser. Nothing is uploaded or sent anywhere.</p>
+
+<section><h2>1. Process details</h2>
+<div class="row"><div><label for="proc">Process name (optional)</label><input type="text" id="proc" maxlength="60" placeholder="e.g. Fixed Assets"></div>
+<div><label for="file">Upload narrative (Word, Excel, text)</label><input type="file" id="file" accept=".docx,.xlsx,.txt,.csv"></div></div>
+<label for="nar">Narrative</label>
+<textarea id="nar" placeholder="Describe who does what, in order. Example: The requester raises a purchase requisition. The manager approves it. Procurement issues a purchase order after vendor selection..."></textarea>
+<div class="row"><button id="base">Generate baseline RCM</button><button class="g" id="mkp">Build AI prompt</button><button class="g" id="c1">Clear inputs</button></div>
+<div class="msg" id="m1" role="status"></div></section>
+
+<section><h2>2. Improve with your own free AI (optional)</h2>
+<label for="pr">Prompt to copy into ChatGPT, Claude or Gemini (you can edit it)</label>
+<textarea id="pr" placeholder="Click Build AI prompt in step 1, then change the wording here if you want to customise it."></textarea>
+<div class="row"><button class="g" id="cp">Copy prompt</button></div>
+<label for="ai">Paste the AI's reply here (table or JSON)</label>
+<textarea id="ai" placeholder='Paste the table the AI gives you, including the FLAGS line'></textarea>
+<div class="row"><label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" id="dupall"> Add every row, even if it looks like an existing one</label><button id="imp">Import AI rows</button><button class="g" id="c2">Clear prompt and reply</button></div>
+<div class="msg" id="m2" role="status"></div></section>
+
+<section><h2>3. Review and edit</h2>
+<p class="sub">Click any cell to edit. Red cells fail a format check (see the notes below the summary). Orange cells are gaps the narrative did not state, such as owner or frequency. Validation checks form only, so risk wording, Key status and assertion choice still need reviewer judgement.</p>
+<div class="msg" id="m3" role="status"></div><div class="msg e" id="fl" style="white-space:pre-wrap"></div><div class="msg" id="vs" role="status"></div><div class="msg" id="vn" style="white-space:pre-wrap;font-weight:400;font-size:13px"></div>
+<div class="w"><table><thead><tr id="hd"></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="row"><button class="g" id="add">Add row</button><button class="g" id="clr">Clear all rows</button><button class="g" id="clrall">Clear everything (steps 1 to 3)</button>
+<button id="xl">Export Excel</button><button id="wd">Export Word</button><button id="cv">Export CSV</button></div>
+<small>Exports are blank-safe: cells starting with = + - or @ are prefixed so spreadsheets do not run them as formulas.</small></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const C=[["id","Sr. No."],["step","Process Step Ref."],["risk","Risk"],["control","Control Description"],["owner","Control Owner"],["freq","Frequency"],["key","Key / Non-Key"],["test","Test Procedure"],["assertion","Assertion"]];
+const ROLES=/(finance controller|accounts? (payable|receivable)? ?(team|clerk|executive|manager)?|accountant|procurement (team|manager|head)?|purchase (manager|team)|warehouse (manager|team|staff)|store ?keeper|hr (manager|team|executive|head)?|payroll (team|officer)|sales (manager|team|executive)|credit controller|treasury|cfo|cfo|controller|manager|director|head|requester|approver|clerk|supervisor)/i;
+let rows=[],n=0,FL="",AIT=null,IMPN=0,PR_GEN="";
+// Nothing is saved in the browser: the tool starts blank on every load. Any rows left by an older version are removed.
+function load(){rows=[];try{localStorage.removeItem("rcm1")}catch(e){}}
+function save(){}
+function say(id,t,c){const e=$(id);e.textContent=t;e.className="msg "+(c||"")}
+function nid(){let i=1;const u=new Set(rows.map(r=>r.id));while(u.has("R"+String(i).padStart(2,"0")))i++;return "R"+String(i).padStart(2,"0")}
+function sents(t){return t.replace(/\s+/g," ").split(/(?<=[.!?])\s+/).filter(s=>s.trim())}
+function baseline(){
+ const t=$("nar").value.trim();if(!t){say("m1","Paste or upload a narrative first.","e");return}
+ const CTL=/\b(approv|authori[sz]|review|reconcil|verif|check|match|validat|sign(ed)? off|inspect|compar|confirm|monitor|segregat|block|limit|dual|escalat)\w*/i,
+  FQ=[[/daily/i,"Daily"],[/weekly/i,"Weekly"],[/month-?end|monthly/i,"Monthly"],[/quarterly/i,"Quarterly"],[/annual|yearly/i,"Annual"],[/\b(each|every|per|upon|whenever|before|prior to)\b/i,"Per transaction"]];
+ let a=0;
+ sents(t).forEach((st,i)=>{
+  if(st.length<15||!CTL.test(st)||rows.some(r=>r.control==st))return;
+  const m=st.match(ROLES),fq=FQ.find(f=>f[0].test(st));
+  rows.push({id:"",step:"Step "+(i+1),risk:"",control:st,owner:m?m[0]:"Owner not specified in narrative",freq:fq?fq[1]:"Not specified",key:"",test:"",assertion:"",src:"Narrative"});a++;
+ });
+ if(!a){say("m1","No controls found. Write the narrative as full sentences, one step per sentence, and use words like approves, reviews or reconciles.","e");return}
+ save();render();
+ say("m1",a+" controls drafted from your narrative only. Risk, Key / Non-Key, test procedure and assertion are left blank because the narrative does not state them. Use the AI prompt in step 2 to complete them.","k");
+}
+function prompt_(){
+ const t=$("nar").value.trim();if(!t){say("m1","Paste or upload a narrative first.","e");return}
+ if($("pr").value.trim()&&$("pr").value!==PR_GEN&&!confirm("The prompt in step 2 has been edited. Rebuilding replaces your edits. Continue?"))return;
+ $("pr").value=`ROLE
+You are an RCM Generator: an internal-audit specialist assistant that converts a process narrative into a Risk & Control Matrix suitable for a SOX / internal-control review.
+
+OUTPUT STRUCTURE
+Create a table with the following structure, using the columns in this order, one row for each control: Sr. No. | Process Step Ref. | Risk | Control Description | Control Owner | Frequency | Key / Non-Key | Test Procedure | Assertion (Occurrence, Completeness, Accuracy, Cutoff, Existence, Valuation, Rights and Obligations or Presentation and Disclosure – pick one primary assertion per control).
+At the beginning of the table, add a line with the label ‘FLAGS’, summarizing any gaps found during the creation of the RCM (see Rules).
+At the end of the table, add a line with the total number of controls, separated by Key / Non-Key controls.
+
+RULES
+1. Use only the narrative provided. Do not invent risks, controls, owners, thresholds or frequencies that are not stated or directly implied by the text.
+2. If a control's owner is not named in the narrative, write "Owner not specified in narrative" in the Control Owner column AND add that row to the FLAGS line.
+3. If a control's frequency is not stated, and cannot be reasonably inferred from words like "annual", "monthly" or "per transaction", write "Not specified" and add it to FLAGS.
+4. Classify each control as Key or Non-Key based on the materiality of the risk if the control fails, using judgement – do not ask the user to pre-classify.
+5. Do not merge two distinct controls described in the narrative into a single row, and do not split one control into two rows.
+6. Number rows sequentially in the order the controls appear in the narrative.
+7. If the narrative is silent on a control the reviewer would expect for that process (e.g. no segregation-of-duties check mentioned), do not fabricate one – note the gap in FLAGS instead.
+
+NARRATIVE
+###
+${t}
+###`;
+ PR_GEN=$("pr").value;
+ say("m1","Prompt ready in step 2. Copy it into your AI tool.","k");$("pr").scrollIntoView({behavior:"smooth"});
+}
+const KNOWN=["id","step","risk","control","owner","freq","key","test","assertion"];
+const HR=[["step",/step/i],["risk",/^risk\b(?!\s*(rating|level|score|rank))/i],["control",/control desc|^control$/i],["owner",/owner/i],["freq",/freq/i],["key",/key/i],["test",/test/i],["assertion",/assert/i]];
+function ensureCol(l){l=String(l).trim();const k="x_"+l.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");if(!C.some(c=>c[0]==k))C.push([k,l]);return k}
+function imp(){
+ const s0=$("ai").value.replace(/```(json)?/gi,"").trim();if(!s0){say("m2","Paste the AI reply first.","e");return}
+ let list=[],fl="",tot=null;const col0=C.length,keepAll=$("dupall").checked;
+ if(s0[0]=="["){
+  try{list=JSON.parse(s0.slice(0,s0.lastIndexOf("]")+1)).map(o=>{const r={};Object.keys(o||{}).forEach(k=>{if(KNOWN.includes(k)){if(k!="id")r[k]=o[k]}else if(String(k).trim()&&!/^(src|sr\.?\s*no\.?)$/i.test(k))r[ensureCol(k)]=o[k]});return r})}
+  catch(e){say("m2","Could not read the JSON: "+e.message,"e");return}
+ }else{
+  let pos={},inF=false;KNOWN.forEach((k,i)=>pos[k]=i);
+  s0.split(/\r?\n/).forEach(line=>{
+   const l=line.replace(/\*\*/g,"").replace(/<br\s*\/?>/gi," ").trim();if(!l||/^[\s:\-|]+$/.test(l))return;
+   if(/^\|?\s*total/i.test(l)){const m=l.match(/\d+/);if(m)tot=+m[0];return}
+   const cells=(l.includes("|")?l.replace(/^\||\|$/g,"").split("|"):l.split("\t")).map(x=>x.trim());
+   if(cells.length<4){
+    if(/^flags/i.test(l)){fl=l.replace(/^flags\s*[:\-–]?\s*/i,"");inF=true}
+    else if(inF)fl+=(fl?" ":"")+l.replace(/^[-•*]\s*/,"");
+    return}
+   inF=false;
+   // Header row = several SHORT cells that look like column names (a data row that merely mentions risk/control/owner is not a header)
+   if(cells.every(c=>c.length<=40)&&cells.filter(c=>HR.some(h=>h[1].test(c))).length>=4){
+    pos={};const used=new Set();
+    cells.forEach((c,i)=>{const h=HR.find(h=>!used.has(h[0])&&h[1].test(c));
+     if(h){used.add(h[0]);pos[h[0]]=i}
+     else if(/^(sr\.?\s*no\.?|s\.?\s*no\.?|#|no\.?|id)$/i.test(c))pos.id=i;
+     else if(c)pos[ensureCol(c)]=i});
+    return}
+   if(/^(total|flags)/i.test(cells[0]))return;
+   const o={};C.forEach(([k])=>{if(k!="id")o[k]=pos[k]!=null?(cells[pos[k]]||""):""});list.push(o);
+  });
+ }
+ let ok=0,skip=0,fill=0;const dups=[],taken=new Set(),mt=[];
+ const fk=()=>C.map(c=>c[0]).filter(k=>k!="id"&&k!="control");
+ list.forEach(o=>{
+  if(!o||(!o.risk&&!o.control)){skip++;return}
+  const r={id:"",src:"AI"};C.forEach(([k])=>{if(k!="id")r[k]=String(o[k]==null?"":o[k])});
+  const d=keepAll?-1:dupOf(r,taken);
+  if(d>=0){taken.add(d);const ex=rows[d];fk().forEach(k=>{if(bad(ex,k)&&!bad(r,k)){ex[k]=r[k];fill++}});dups.push(d+1);mt.push("\""+String(r.control||r.risk).slice(0,35)+"...\" = row "+(d+1));return}
+  rows.push(r);ok++});
+ const nc=C.length-col0;
+ if(ok||dups.length||fl||nc)IMPN++;
+ if(fl&&!FL.includes(fl)){const ln="AI reply "+IMPN+": "+fl;FL=FL?FL+"\n"+ln:ln}
+ if(tot!=null)AIT=tot;
+ if(!ok&&!dups.length&&!fl&&!nc){say("m2","No table rows found. Paste the full table the AI produced, with its header row.","e");return}
+ save();render();
+ say("m2",ok+" new rows imported"+(nc?"; "+nc+" new column"+(nc>1?"s":"")+" added ("+C.slice(col0).map(c=>c[1]).join(", ")+")":"")+(dups.length?"; "+dups.length+" looked like existing rows so no duplicate was added ("+mt.slice(0,4).join("; ")+(mt.length>4?"; ...":"")+")"+(fill?", and "+fill+" blank cells in those rows were filled":"")+". If one of these is really a new row, tick \"Add every row\" and import again":"")+(skip?"; "+skip+" empty rows skipped":"")+(fl?". FLAGS from this reply were added below the table":"")+".",(ok||dups.length||nc)?"k":"e");
+}
+function toks(t){const SW=new Set("the a an of to and or is are by for in on with that it be as at from this then which their its into".split(" "));return new Set((String(t).toLowerCase().match(/[a-z0-9]+/g)||[]).filter(w=>!SW.has(w)).map(w=>w.length>5?w.replace(/(ation|ing|ed|es|ion|al|s)$/,""):w))}
+function sim(a,b){const A=toks(a),B=toks(b);if(!A.size||!B.size)return 0;let i=0;A.forEach(w=>{if(B.has(w))i++});return i/(A.size+B.size-i)}
+function dupOf(r,taken){let best=-1,bs=0;rows.forEach((x,i)=>{if(taken&&taken.has(i))return;const k=sim(x.risk,r.risk);let sc=0;
+ if(bad(x,"control")||bad(r,"control")){if(k>=0.6)sc=k}else{const c=sim(x.control,r.control);if(c>=0.6||(c>=0.5&&k>=0.5))sc=c+k/2}
+ if(sc>bs){bs=sc;best=i}});return best}
+function bad(r,k){const v=(r[k]||"").trim().toLowerCase();return v==""||/^(not stated|not specified|owner not specified|no control identified)/.test(v)}
+function cnt(){let k=0,nk=0;rows.forEach(r=>{const v=(r.key||"").toLowerCase();if(/non/.test(v))nk++;else if(/key/.test(v))k++});return[k,nk]}
+const AS=["Occurrence","Completeness","Accuracy","Cutoff","Existence","Valuation","Rights and Obligations","Presentation and Disclosure"];
+function vld(){
+ const nm=v=>String(v||"").toLowerCase().replace(/cut[\s-]off/g,"cutoff").replace(/&/g,"and").replace(/[.;,\s]+$/,"").replace(/\s+/g," ").trim(),low=AS.map(a=>a.toLowerCase()),seen={},iss=rows.map(()=>({}));
+ rows.forEach((r,i)=>{const c=nm(r.control);if(c&&c!="no control identified")(seen[c]=seen[c]||[]).push(i)});
+ rows.forEach((r,i)=>{
+  const e=iss[i],t=(r.test||"").trim(),a=nm(r.assertion),c=nm(r.control);
+  if(!(r.risk||"").trim())e.risk="Risk is blank";
+  if(!(r.control||"").trim())e.control="Control is blank";
+  if(!(r.owner||"").trim())e.owner='Owner is blank (use "Owner not specified in narrative" if not stated)';
+  if(!(r.freq||"").trim())e.freq='Frequency is blank (use "Not specified" if not stated)';
+  if(!/^(key|non[\s-]?key)$/.test(nm(r.key)))e.key="Must be exactly Key or Non-Key";
+  if(!low.includes(a))e.assertion=!a?"Assertion is blank":low.filter(x=>a.includes(x)).length>1?"More than one assertion given (pick one primary)":"Not one of the eight approved assertions";
+  if(!t)e.test="Test procedure is blank";else if(t.length<20||/^(review|check|test|verify|inspect)( the)?( control)?$/i.test(t.replace(/\.$/,"")))e.test="Test procedure is too generic (say what is tested and on what sample)";
+  if(seen[c]&&seen[c].length>1)e.control=(e.control?e.control+"; ":"")+"Duplicate of row "+(seen[c].find(x=>x!=i)+1);
+ });
+ return iss;
+}
+function render(){
+ rows.forEach((r,i)=>r.id=String(i+1));
+ const F=["risk","control","owner","freq"],iss=vld(),lab=Object.fromEntries(C);
+ $("hd").innerHTML=C.map(c=>"<th>"+c[1]+"</th>").join("")+"<th></th>";
+ $("tb").innerHTML=rows.length?rows.map((r,i)=>"<tr>"+C.map(([k])=>{const v=iss[i][k];return k=="id"?`<td class="src">${esc(r[k])}</td>`:`<td contenteditable tabindex="0" data-i="${i}" data-k="${k}" class="${v?"v":F.includes(k)&&bad(r,k)?"m":""}"${v?` title="${esc(v)}"`:""}>${esc(r[k])}</td>`}).join("")+`<td><button class="x" data-d="${i}" aria-label="Delete row ${esc(r.id)}">&times;</button></td></tr>`).join(""):`<tr><td colspan="10">No rows yet. Generate a baseline in step 1, import the AI table, or add a row.</td></tr>`;
+ const[k,nk]=cnt();
+ say("m3",rows.length+" controls ("+k+" Key, "+nk+" Non-Key).",rows.length?"k":"");
+ $("fl").textContent=FL?"FLAGS:"+(FL.includes("\n")?"\n":" ")+FL:"";
+ const bs=iss.filter(e=>Object.keys(e).length).length,mm=AIT!=null&&AIT!==rows.length;
+ if(!rows.length){say("vs","");$("vn").textContent=""}
+ else{
+  say("vs","Validation: "+(rows.length-bs)+" of "+rows.length+" rows pass."+(bs?" "+bs+" need review.":"")+(mm?" The AI reported "+AIT+" controls but the table has "+rows.length+".":""),bs||mm?"e":"k");
+  const L=[];iss.forEach((e,i)=>Object.keys(e).forEach(f=>L.push("Row "+(i+1)+", "+lab[f]+": "+e[f])));
+  $("vn").textContent=L.slice(0,40).join("\n")+(L.length>40?"\n...and "+(L.length-40)+" more":"");
+ }
+}
+function esc(v){return String(v==null?"":v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function safe(v){v=String(v==null?"":v);return /^[=+\-@\t\r]/.test(v)?"'"+v:v}
+function dl(name,mime,txt){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:mime}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function tbl(){
+ const[k,nk]=cnt(),ps="style='font-family:Arial;font-size:10pt'",np=vld().filter(e=>!Object.keys(e).length).length;
+ return (FL?"<p "+ps+"><b>FLAGS:</b> "+esc(FL).replace(/\n/g,"<br>")+"</p>":"")+"<table border='1' cellspacing='0' cellpadding='4' style='border-collapse:collapse;font-family:Arial;font-size:10pt'><tr>"+C.map(c=>"<th style='background:#1E3A5F;color:#fff'>"+c[1]+"</th>").join("")+"</tr>"+rows.map(r=>"<tr>"+C.map(([k])=>"<td>"+esc(safe(r[k]))+"</td>").join("")+"</tr>").join("")+"</table><p "+ps+"><b>Total controls: "+rows.length+"</b> (Key: "+k+", Non-Key: "+nk+")</p><p "+ps+">Format validation: "+np+" of "+rows.length+" rows pass (checks form only; substance needs reviewer judgement).</p>";
+}
+
+// Real .xlsx / .docx writers (zip of XML, no libraries, works offline)
+const CRC=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=-1;for(let i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return(c^-1)>>>0}
+function zipStore(files){
+ const enc=new TextEncoder(),parts=[],cd=[];let off=0;const ks=Object.keys(files);
+ ks.forEach(name=>{
+  const nb=enc.encode(name),d=enc.encode(files[name]),crc=crc32(d);
+  const lh=new DataView(new ArrayBuffer(30));
+  lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(12,0x21,true);lh.setUint32(14,crc,true);lh.setUint32(18,d.length,true);lh.setUint32(22,d.length,true);lh.setUint16(26,nb.length,true);
+  parts.push(new Uint8Array(lh.buffer),nb,d);
+  const ch=new DataView(new ArrayBuffer(46));
+  ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(14,0x21,true);ch.setUint32(16,crc,true);ch.setUint32(20,d.length,true);ch.setUint32(24,d.length,true);ch.setUint16(28,nb.length,true);ch.setUint32(42,off,true);
+  cd.push(new Uint8Array(ch.buffer),nb);
+  off+=30+nb.length+d.length;
+ });
+ const cds=cd.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));
+ e.setUint32(0,0x06054b50,true);e.setUint16(8,ks.length,true);e.setUint16(10,ks.length,true);e.setUint32(12,cds,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...cd,new Uint8Array(e.buffer)]);
+}
+const X=v=>esc(String(v==null?"":v).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,""));
+const NS_REL="http://schemas.openxmlformats.org/package/2006/relationships",NS_OD="http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+function xlsxBlob(){
+ const[k,nk]=cnt(),np=vld().filter(e=>!Object.keys(e).length).length;
+ const col=i=>String.fromCharCode(65+i);
+ const cell=(r,i,v,s)=>`<c r="${col(i)}${r}" t="inlineStr" s="${s}"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+ let sd="<row r=\"1\">"+C.map((c,i)=>cell(1,i,c[1],1)).join("")+"</row>";
+ rows.forEach((r,j)=>{sd+=`<row r="${j+2}">`+C.map(([key],i)=>cell(j+2,i,r[key],0)).join("")+"</row>"});
+ const cols=C.map((c,i)=>`<col min="${i+1}" max="${i+1}" width="${i<2?14:30}" customWidth="1"/>`).join("");
+ const sheet1=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${sd}</sheetData></worksheet>`;
+ const notes=[(FL?"FLAGS: "+FL:""),"Total controls: "+rows.length+" (Key: "+k+", Non-Key: "+nk+")","Format validation: "+np+" of "+rows.length+" rows pass (checks form only; substance needs reviewer judgement).","Draft for professional review."].filter(Boolean).join("\n").split("\n");
+ const sheet2=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="110" customWidth="1"/></cols><sheetData>`+notes.map((t,i)=>`<row r="${i+1}">${cell(i+1,0,t,0)}</row>`).join("")+`</sheetData></worksheet>`;
+ const bd='<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>';
+ const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+ return zipStore({
+  "[Content_Types].xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+  "_rels/.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${NS_REL}"><Relationship Id="rId1" Type="${NS_OD}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+  "xl/workbook.xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${NS_OD}"><sheets><sheet name="RCM" sheetId="1" r:id="rId1"/><sheet name="Review notes" sheetId="2" r:id="rId2"/></sheets></workbook>`,
+  "xl/_rels/workbook.xml.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${NS_REL}"><Relationship Id="rId1" Type="${NS_OD}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS_OD}/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="${NS_OD}/styles" Target="styles.xml"/></Relationships>`,
+  "xl/styles.xml":styles,"xl/worksheets/sheet1.xml":sheet1,"xl/worksheets/sheet2.xml":sheet2});
+}
+function docxBlob(pn){
+ const[k,nk]=cnt(),np=vld().filter(e=>!Object.keys(e).length).length;
+ const run=(t,o)=>`<w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${o.b?"<w:b/>":""}${o.c?`<w:color w:val="${o.c}"/>`:""}<w:sz w:val="${o.sz||20}"/></w:rPr><w:t xml:space="preserve">${X(t)}</w:t></w:r>`;
+ const P=(t,o={})=>String(t==null?"":t).split("\n").map(l=>`<w:p>${run(l,o)}</w:p>`).join("");
+ const tw=Math.floor((16838-1700)/C.length);
+ const tc=(t,h)=>`<w:tc><w:tcPr><w:tcW w:w="${tw}" w:type="dxa"/>${h?'<w:shd w:val="clear" w:color="auto" w:fill="1E3A5F"/>':""}</w:tcPr>${P(t,{b:h,c:h?"FFFFFF":"",sz:18})}</w:tc>`;
+ const bdr=["top","left","bottom","right","insideH","insideV"].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join("");
+ const tbl=`<w:tbl><w:tblPr><w:tblW w:w="${tw*C.length}" w:type="dxa"/><w:tblBorders>${bdr}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${C.map(()=>`<w:gridCol w:w="${tw}"/>`).join("")}</w:tblGrid><w:tr><w:trPr><w:tblHeader/></w:trPr>${C.map(c=>tc(c[1],true)).join("")}</w:tr>${rows.map(r=>"<w:tr><w:trPr><w:cantSplit/></w:trPr>"+C.map(([key])=>tc(r[key],false)).join("")+"</w:tr>").join("")}</w:tbl>`;
+ const body=P("Risk and Control Matrix"+(pn?" - "+pn:"")+" (draft)",{b:true,sz:28})+(FL?P("FLAGS: "+FL,{sz:20}):"")+tbl+P("Total controls: "+rows.length+" (Key: "+k+", Non-Key: "+nk+")",{b:true})+P("Format validation: "+np+" of "+rows.length+" rows pass (checks form only; substance needs reviewer judgement).")+P("Draft for professional review.",{sz:18});
+ return zipStore({
+  "[Content_Types].xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,
+  "_rels/.rels":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${NS_REL}"><Relationship Id="rId1" Type="${NS_OD}/officeDocument" Target="word/document.xml"/></Relationships>`,
+  "word/document.xml":`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="850" w:header="400" w:footer="400" w:gutter="0"/></w:sectPr></w:body></w:document>`});
+}
+function exp(t){
+ if(!rows.length){say("m3","Nothing to export yet.","e");return}
+ const pn=$("proc").value.trim(),nm=(pn.replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)||"Process")+"_RCM";
+ if(t=="csv")dl(nm+".csv","text/csv;charset=utf-8","\ufeff"+[C.map(c=>c[1])].concat(rows.map(r=>C.map(([k])=>safe(r[k])))).map(a=>a.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\r\n"));
+ else if(t=="xl")dl(nm+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",xlsxBlob());
+ else dl(nm+".docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document",docxBlob(pn));
+}
+$("tb").addEventListener("input",e=>{const t=e.target;if(t.dataset.k){rows[t.dataset.i][t.dataset.k]=t.textContent;save()}});
+$("tb").addEventListener("focusout",e=>{if(e.target.dataset.k)render()});
+$("tb").addEventListener("click",e=>{const d=e.target.dataset.d;if(d!=null){rows.splice(+d,1);save();render()}});
+$("base").onclick=baseline;$("mkp").onclick=prompt_;$("imp").onclick=imp;
+$("cp").onclick=()=>{const p=$("pr");if(!p.value){say("m2","Build the prompt first.","e");return}p.select();try{navigator.clipboard.writeText(p.value).then(()=>say("m2","Prompt copied.","k"),()=>{document.execCommand("copy");say("m2","Prompt copied.","k")})}catch(e){document.execCommand("copy");say("m2","Prompt copied.","k")}};
+$("add").onclick=()=>{const r={src:"Manual",id:nid()};C.forEach(([k])=>{if(!(k in r))r[k]=""});rows.push(r);save();render()};
+$("clr").onclick=()=>{if(rows.length&&confirm("Delete all rows?")){rows=[];FL="";IMPN=0;AIT=null;save();render()}};
+$("xl").onclick=()=>exp("xl");$("wd").onclick=()=>exp("wd");$("cv").onclick=()=>exp("csv");
+// Offline .docx/.xlsx reader: a .docx/.xlsx is a zip of XML files, unpacked with the browser's built-in DecompressionStream
+async function unzip(buf){
+ const v=new DataView(buf),u=new Uint8Array(buf),dec=new TextDecoder(),files={};
+ let e=-1;for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-70000);i--)if(v.getUint32(i,true)==0x06054b50){e=i;break}
+ if(e<0)throw new Error("not a valid zip-based file");
+ let n=v.getUint16(e+10,true),p=v.getUint32(e+16,true);
+ for(let i=0;i<n;i++){
+  if(v.getUint32(p,true)!=0x02014b50)break;
+  const m=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),lo=v.getUint32(p+42,true);
+  const name=dec.decode(u.subarray(p+46,p+46+nl));p+=46+nl+xl+cl;
+  if(!/^(word\/document\.xml|xl\/sharedStrings\.xml|xl\/worksheets\/sheet\d+\.xml)$/.test(name))continue;
+  const ds=lo+30+v.getUint16(lo+26,true)+v.getUint16(lo+28,true),d=u.subarray(ds,ds+cs);
+  files[name]=m==0?dec.decode(d):await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+ }
+ return files;
+}
+const xml=s=>new DOMParser().parseFromString(s,"application/xml");
+function docxText(z){
+ if(!z["word/document.xml"])throw new Error("no document text found");
+ return [...xml(z["word/document.xml"]).getElementsByTagName("w:p")].map(p=>p.textContent.trim()).filter(Boolean).join("\n");
+}
+function xlsxText(z){
+ const sh=[...xml(z["xl/sharedStrings.xml"]||"<x/>").getElementsByTagName("si")].map(s=>s.textContent);
+ const names=Object.keys(z).filter(k=>/worksheets/.test(k)).sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/))),out=[];
+ if(!names.length)throw new Error("no sheets found");
+ names.forEach(nm=>[...xml(z[nm]).getElementsByTagName("row")].forEach(r=>{
+  const cells=[...r.getElementsByTagName("c")].map(c=>{const t=c.getAttribute("t"),val=c.getElementsByTagName("v")[0];
+   return (t=="s"&&val?sh[+val.textContent]:t=="inlineStr"?c.textContent:val?val.textContent:"")||""}).map(x=>String(x).trim()).filter(Boolean);
+  if(cells.length)out.push(cells.join(" - ")+".");
+ }));
+ return out.join("\n");
+}
+$("file").onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;const x=(f.name.split(".").pop()||"").toLowerCase();
+ try{
+  let t;
+  if(x=="txt"||x=="csv")t=await f.text();
+  else if(x=="docx")t=docxText(await unzip(await f.arrayBuffer()));
+  else if(x=="xlsx")t=xlsxText(await unzip(await f.arrayBuffer()));
+  else{say("m1","Unsupported file type. Use .docx, .xlsx, .txt or .csv. For older .doc or .xls files, save as .docx or .xlsx first, or paste the text.","e");e.target.value="";return}
+  if(!t||!t.trim()){say("m1","No readable text found in "+f.name+". If it is a scan or image, paste the text instead.","e");return}
+  $("nar").value=t.trim();say("m1","Loaded "+f.name+" ("+t.trim().length+" characters). Check the text below, then generate the baseline.","k");
+ }catch(err){say("m1","Could not read "+f.name+": "+err.message+". Try saving it again as .docx or .xlsx, or paste the text.","e")}
+ e.target.value="";
+};
+$("c1").onclick=()=>{$("nar").value="";$("file").value="";$("proc").value="";say("m1","Step 1 inputs cleared.","k")};
+$("c2").onclick=()=>{$("pr").value="";$("ai").value="";say("m2","Step 2 prompt and reply cleared.","k")};
+$("clrall").onclick=()=>{if(!confirm("Clear all data in steps 1, 2 and 3? This cannot be undone."))return;
+ $("nar").value="";$("file").value="";$("proc").value="";$("pr").value="";$("ai").value="";
+ rows=[];FL="";IMPN=0;AIT=null;save();render();say("m1","");say("m2","");say("m3","Everything cleared. You can start a new RCM.","k")};
+load();render();
+</script></body></html>
