@@ -4,7 +4,7 @@ Offline browser tool that turns a process narrative into a draft Risk and Contro
 
 Open the live tool. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
-All files in `demo/` are **synthetic sample data**.
+All files in `demo, are **synthetic sample data**.
 
 ---
 
@@ -86,7 +86,7 @@ Listed here because they are real, and they are the roadmap:
 
 ## 6. Run or host it
 
-- **Locally:** download `RCM builder.html` and double-click it.
+- **Locally:** download `RCM_builder.html` and double-click it.
 - **GitHub Pages: (https://github.com/caswetamohanty/RCM-builder/blob/main/RCM_builder.html)
 
 ## 7. About
