@@ -2,9 +2,9 @@
 Offline browser tool that turns a process narrative into a draft Risk and Control Matrix (RCM) with validation and Excel/Word/CSV export
 
 
-Open the live tool. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
+**[Open the live tool](https://caswetamohanty.github.io/RCM-builder/)**. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
-All files in `demo, are **synthetic sample data**.
+All files in Demo_data, are **synthetic sample data**.
 
 ---
 
@@ -41,7 +41,7 @@ The demo runs the tool on an 11-sentence Fixed Assets narrative (capex approval,
 
 ### Try it in two minutes
 
-1. Open the tool ( open the tool via https://github.com/caswetamohanty/RCM-builder/blob/main/RCM_builder.html or download `RCM builder.html` and open it in any browser).
+1.  Open the tool at https://caswetamohanty.github.io/RCM-builder/ (or download RCM_builder.html and open it in any browser).
 2. Upload `demo/sample-narratives/Fixed_Assets_Narrative.docx` (or paste the `.txt`).
 3. Click **Generate baseline RCM**. You get 8 controls, with owner and frequency gaps highlighted orange.
 4. Click **Build AI prompt** and compare it with `demo/sample-outputs/Fixed_Assets_AI_Prompt.txt`.
