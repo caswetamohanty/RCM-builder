@@ -44,14 +44,14 @@ The demo runs the tool on an 11-sentence Fixed Assets narrative (capex approval,
 1.  Open the tool at https://caswetamohanty.github.io/RCM-builder/ (or download RCM_builder.html and open it in any browser).
 2. Upload `demo/sample-narratives/Fixed_Assets_Narrative.docx` (or paste the `.txt`).
 3. Click **Generate baseline RCM**. You get 8 controls, with owner and frequency gaps highlighted orange.
-4. Click **Build AI prompt** and compare it with `demo/sample-outputs/Fixed_Assets_AI_Prompt.txt`.
-5. Paste `demo/sample-outputs/Fixed_Assets_Sample_AI_Reply.md` into the reply box and click **Import AI rows**. Expected result: 1 new row, 8 recognised as existing rows and filled, validation **9 of 9 rows pass**.
-6. Export Excel, Word or CSV and compare with `demo/sample-outputs/`.
+4. Click **Build AI prompt** and compare it with `Demo_data/sample-outputs/Fixed_Assets_AI_Prompt.txt`.
+5. Paste `demo_data/sample-outputs/Fixed_Assets_Sample_AI_Reply.md` into the reply box and click **Import AI rows**. Expected result: 1 new row, 8 recognised as existing rows and filled, validation **9 of 9 rows pass**.
+6. Export Excel, Word or CSV and compare with `Demo_data/sample-outputs/`.
 
 ### Demo files
 
 ```
-demo/
+Demo_data/
 ├── sample-narratives/
 │   ├── Fixed_Assets_Narrative.txt        # input (11 sentences, synthetic)
 │   └── Fixed_Assets_Narrative.docx       # same text, to test the Word upload
