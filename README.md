@@ -89,6 +89,4 @@ Listed here because they are real, and they are the roadmap:
 - **Locally:** download `RCM_builder.html` and double-click it.
 - **GitHub Pages:** https://caswetamohanty.github.io/RCM-builder/RCM_builder.html
 
-## 7. About
-
-Built by CA Sweta Mohanty | Risk, audit and compliance professional| www.linkedin.com/in/caswetamohanty | caswetamohanty@gmail.com
+A project by CA Sweta Mohanty | [LinkedIn](https://www.linkedin.com/in/caswetamohanty/) | [Email me](https://mail.google.com/mail/?view=cm&fs=1&to=caswetamohanty@gmail.com) (caswetamohanty@gmail.com)
