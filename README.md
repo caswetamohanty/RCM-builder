@@ -1,10 +1,9 @@
 # RCM-builder: Process Narrative to Risk & Control Matrix
 Offline browser tool that turns a process narrative into a draft Risk and Control Matrix (RCM) with validation and Excel/Word/CSV export
 
+**[Open the live tool](https://caswetamohanty.github.io/RCM-builder/RCM_builder.html)**
 
-**[Open the live tool](https://caswetamohanty.github.io/RCM-builder/RCM_builder.html)**. 
-
-No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
+No install, no server, no sign-up. Everything runs in the browser.The tool never sends data anywhere. If you use the optional AI step, the prompt goes to whichever chatbot you paste it into, so anonymise real client narratives first.
 
 All files in Demo_data are **synthetic sample data**.
 
