@@ -2,7 +2,9 @@
 Offline browser tool that turns a process narrative into a draft Risk and Control Matrix (RCM) with validation and Excel/Word/CSV export
 
 
-**[Open the live tool](https://caswetamohanty.github.io/RCM-builder/RCM_builder.html)**. No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
+**[Open the live tool](https://caswetamohanty.github.io/RCM-builder/RCM_builder.html)**. 
+
+No install, no server, no sign-up. Everything runs in the browser and nothing is uploaded anywhere.
 
 All files in Demo_data are **synthetic sample data**.
 
